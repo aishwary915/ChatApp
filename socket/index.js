@@ -1,22 +1,26 @@
-
+const http = require("http");
 const { Server } = require("socket.io");
 require("dotenv").config();
 
 let onlineUsers = [];
 
-const io = new Server({ cors: process.env.CLIENT_URI });//this step is done because our server and client are running on different domain
+const httpServer = http.createServer();
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.CLIENT_URI,
+    methods: ["GET", "POST"]
+  }
+});//this step is done because our server and client are running on different domain
 
 io.on("connection", (socket) => {
   console.log("New Connection",socket.id);
 
   //listen to a connection
   socket.on("addNewUser", (userId) => {
-    !onlineUsers.some((user)=>{
-        user.userId === userId
-    })&&
-    onlineUsers.push({userId,socketId:socket.id});
-    console.log("onlineUsers",onlineUsers);
-    io.emit("getOnlineUsers",onlineUsers);
+    if (!onlineUsers.some((user) => user.userId === userId)) {
+      onlineUsers.push({ userId, socketId: socket.id });
+    }
+    io.emit("getOnlineUsers", onlineUsers);
   });
   // listen to message
   socket.on("sendMessage",(message)=>{
@@ -33,4 +37,7 @@ io.on("connection", (socket) => {
   });
 });
 
-io.listen(process.env.PORT);
+const PORT = process.env.PORT || 3001;
+httpServer.listen(PORT, () => {
+  console.log(`Socket server running on port ${PORT}`);
+});
